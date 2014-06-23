@@ -21,4 +21,4 @@
 # [dep1: [key: :value],
 #  dep2: [key: :value]]
 
-[exsyslog: [level: :info]]
+[exsyslog: [level: :debug, host: '127.0.0.1', facility: :local1]]

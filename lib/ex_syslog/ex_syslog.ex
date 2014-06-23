@@ -1,13 +1,18 @@
 defmodule ExSyslog.Logger do
 
   import ExPrintf
+  import ExSyslog.Util, only: [get_env: 2]
 
   @info_level  ExSyslog.Util.level(:info)
 
-  def set_level(level_atom) do
+  def level(level_atom) do
     level = ExSyslog.Util.level(level_atom)      
-    Application.put_env :exsyslog, :level, level
-    #:gen_event.call(:error_logger, :exsyslog_event_handler, {:set_level, level})
+    #Application.put_env :exsyslog, :level, level
+    ExSyslog.EventHandler.level level
+  end
+
+  def level() do
+    get_env(:level, :undefined)
   end
 
   def log(level_atom, string), do: log(level_atom, string, [])
@@ -35,7 +40,6 @@ defmodule ExSyslog.Logger do
 
   def send_message(level, format, data) do
     :gen_event.notify(:error_logger, format(level, format, data))
-    #IO.puts format(level, format, data)
   end
 
   def format(level, format, data) when is_list(data) do

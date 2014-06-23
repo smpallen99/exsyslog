@@ -1,16 +1,18 @@
 defmodule ExSyslog.EventHandler do
   import ExPrintf
-  use GenEvent.Behaviour 
+  import ExSyslog.Util, only: [get_env: 2, put_env: 2]
 
-  defmodule State do
-    defstruct level: 7
+  use GenEvent.Behaviour 
+  use Bitwise
+
+  defmodule State do 
+    defstruct level: 2, host: :undefined, socket: nil, port: 0, 
+              hostname: nil, appid: nil, facility: 0
     def new, do: %State{}
     def new(opts), do: struct(new, opts)
   end
 
-    # def start_link do
-    #   :gen_event.start_link {:local, :error_logger}
-    # end
+  @syslog_version 1
 
   def level do
     :gen_event.call(:error_logger, ExSyslog.EventHandler, :level)
@@ -20,17 +22,44 @@ defmodule ExSyslog.EventHandler do
     :gen_event.call(:error_logger, ExSyslog.EventHandler, {:set_level, level})
   end
 
+  def status() do
+    :gen_event.call(:error_logger, ExSyslog.EventHandler, :status)
+  end
+
   def init([]) do
     IO.puts "Event handler starting..."
-    {:ok, State.new} 
+    {:ok, socket} = :gen_udp.open(0)
+    {:ok, :ok, state} = handle_call(:load_config, State.new(socket: socket))
+    {:ok, state} 
   end
 
   def handle_call({:set_level, level}, state) do
+    put_env :level, level
     {:ok, :ok, struct(state, level: level)}
   end
 
   def handle_call(:level, %State{level: level} = state) do
     {:ok, level, state}
+  end
+  def handle_call(:status, state) do
+    {:ok, state, state}
+  end
+
+  def handle_call(:load_config, state) do
+    host = case :inet.getaddr(get_env(:host, :undefined), :inet) do
+      {:ok, address} -> address
+      {:error, _} -> :undefined
+    end
+    opts = [
+      host: host, 
+      port: get_env(:port, 514),
+      hostname: :net_adm.localhost(),
+      os_pid: :os.getpid(),
+      appid: get_env(:appid, "exsyslog"),
+      facility: ExSyslog.Util.facility(get_env(:facility, :local2)),
+      level: ExSyslog.Util.level(get_env(:level, :info)),
+    ] 
+    {:ok, :ok, struct(state, opts)}
   end
 
   def handle_event(%ExSyslog.Message{level: level, msg: msg, msgid: msgid, pid: pid}, state) do
@@ -41,15 +70,13 @@ defmodule ExSyslog.EventHandler do
   def handle_event({class, _gl, {pid, format, args}}, %State{level: max} = state) do
     case otp_event_level(class, format) do
       :undefined -> 
-        # IO.puts "undefined..."
-        # IO.puts "event --> class: #{inspect class}, pid: #{inspect pid}, format: #{inspect format}, args: #{inspect args}"
         {:ok, state}
       level when level > max -> 
-        # IO.puts "#{level} > #{max}"
-        # IO.puts "event --> class: #{inspect class}, pid: #{inspect pid}, format: #{inspect format}, args: #{inspect args}"
         {:ok, state}
       level -> 
-        IO.puts "event --> class: #{inspect class}, pid: #{inspect pid}, format: #{inspect format}, args: #{inspect args}"
+        {msgid, msg} = message(format, args)
+        write(level, msgid, msg, pid, state)
+        #IO.puts "event --> class: #{inspect class}, pid: #{inspect pid}, format: #{inspect format}, args: #{inspect args}"
         {:ok, state}
     end
   end
@@ -59,14 +86,31 @@ defmodule ExSyslog.EventHandler do
     {:ok, state}
   end
 
-  def write(level, _msgid, msg, pid, _state) do
-    write(level, :undefined, "#{inspect pid} #{msg}")
+  def write(level, :undefined, msg, pid, _state) do
+    write(level, :undefined, '#{inspect pid} #{msg}')
+  end
+
+  def write(level, msgid, msg, pid, state) when is_list(msg) or is_binary(msg) do
+    %State{facility: facil, appid: app, hostname: hostname, host: host, port: port, socket: socket} = state
+    pre = :io_lib.format('<~B>~B ~s ~s ~s ~p ~s - ', [facil ||| level,
+      @syslog_version, '', hostname, app, pid, msgid])
+    send_msg(socket, host, port, [pre, msg, '\n'])
   end
 
   def write(_, :undefined, packet), do: IO.puts packet
   
+  def send_msg(_, :undefined, _, packet) do
+    :io.format('~s', [packet])
+  end
+
+  def send_msg(socket, host, port, packet) do
+    IO.puts "writing to socket #{packet}"
+    :gen_udp.send(socket, host, port, packet)
+  end
+
   def message(type, report) when type in [:std_error, :std_info, :std_warning, :progress_report, :progress] do
-    {type, ExSyslog.Util.format(type, "#{inspect report}", [])}
+    # {type, ExSyslog.Util.format(type, "#{inspect report}", [])}
+    {type, ExSyslog.Util.format('~2048.0p', [report])}
   end
 
   def message(format, args) do
@@ -86,7 +130,6 @@ defmodule ExSyslog.EventHandler do
   def otp_event_level(:info_report, _),       do: level_notice
   def otp_event_level(_, _),                  do: level_debug
     
-
   def level_debug,  do: 7
   def level_info,   do: 6
   def level_notice, do: 5
