@@ -1,4 +1,4 @@
-defmodule Exsyslog.Supervisor do
+defmodule ExSyslog.Supervisor do
   use Supervisor.Behaviour
 
   def start_link do
@@ -8,7 +8,8 @@ defmodule Exsyslog.Supervisor do
   def init([]) do
     children = [
       # Define workers and child supervisors to be supervised
-      # worker(Exsyslog.Worker, [arg1, arg2, arg3])
+      #worker(ExSyslog.EventHandler, []),
+      worker(ExSyslog.Monitor, [])
     ]
 
     # See http://elixir-lang.org/docs/stable/Supervisor.Behaviour.html

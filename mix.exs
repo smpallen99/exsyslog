@@ -2,7 +2,7 @@ defmodule Exsyslog.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :exsyslog,
+    [app: :ex_syslog,
      version: "0.0.1",
      elixir: "~> 0.13.2",
      deps: deps]
@@ -13,7 +13,7 @@ defmodule Exsyslog.Mixfile do
   # Type `mix help compile.app` for more information
   def application do
     [applications: [],
-     mod: {Exsyslog, []}]
+     mod: {ExSyslog, []}]
   end
 
   # Dependencies can be hex.pm packages:
@@ -26,6 +26,9 @@ defmodule Exsyslog.Mixfile do
   #
   # Type `mix help deps` for more examples and options
   defp deps do
-    []
+    [ 
+      {:exprintf, github: "parroty/exprintf", tag: "v0.1.0"},
+      {:exactor, "~>0.3.3"},
+    ]
   end
 end

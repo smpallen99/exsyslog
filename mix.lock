@@ -1,0 +1,2 @@
+%{"exactor": {:package, "0.3.3"},
+  "exprintf": {:git, "git://github.com/parroty/exprintf.git", "4a0f432b3edc1c40d318d7f447409226948ccc24", [tag: "v0.1.0"]}}
