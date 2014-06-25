@@ -50,10 +50,11 @@ defmodule ExSyslog.EventHandler do
       {:ok, address} -> address
       {:error, _} -> :undefined
     end
+    [hostname | _] = String.split("#{:net_adm.localhost()}", ".")
     opts = [
       host: host, 
       port: get_env(:port, 514),
-      hostname: :net_adm.localhost(),
+      hostname: hostname,
       os_pid: :os.getpid(),
       appid: get_env(:appid, "exsyslog"),
       facility: ExSyslog.Util.facility(get_env(:facility, :local2)),
@@ -86,14 +87,16 @@ defmodule ExSyslog.EventHandler do
     {:ok, state}
   end
 
-  def write(level, :undefined, msg, pid, _state) do
-    write(level, :undefined, '#{inspect pid} #{msg}')
+  def write(level, :undefined, msg, pid, state) do
+    write(level, '-----------', msg, pid, state)
   end
 
   def write(level, msgid, msg, pid, state) when is_list(msg) or is_binary(msg) do
     %State{facility: facil, appid: app, hostname: hostname, host: host, port: port, socket: socket} = state
-    pre = :io_lib.format('<~B>~B ~s ~s ~s ~p ~s - ', [facil ||| level,
-      @syslog_version, '', hostname, app, pid, msgid])
+      # pre = :io_lib.format('<~B>~B ~s ~s ~s ~p ~s - ', [facil ||| level,
+      #   @syslog_version, '', hostname, app, pid, msgid])
+    pre = :io_lib.format('<~B>~s ~s~p: ~s - ', [facil ||| level,
+      ExSyslog.Util.iso8601_timestamp, app, pid, msgid])
     send_msg(socket, host, port, [pre, msg, '\n'])
   end
 
@@ -104,13 +107,42 @@ defmodule ExSyslog.EventHandler do
   end
 
   def send_msg(socket, host, port, packet) do
-    IO.puts "writing to socket #{packet}"
     :gen_udp.send(socket, host, port, packet)
   end
 
   def message(type, report) when type in [:std_error, :std_info, :std_warning, :progress_report, :progress] do
     # {type, ExSyslog.Util.format(type, "#{inspect report}", [])}
     {type, ExSyslog.Util.format('~2048.0p', [report])}
+  end
+
+  def message(:crash_report, report) do
+    msg = if :erts_debug.flat_size(report) > get_env(:max_term_size, 8192) do
+      max_string = get_env(:max_message_size, 16000)
+      ['*Truncated* - ', :trunc_io.print(report, max_string)]
+    else
+      :proc_lib.format(report)
+    end
+    {:crash_report, msg}
+  end
+  def message(:supervisor_report, report) do
+    name = get_value(:supervisor, report)
+    error = get_value(:errorcontext, report)
+    reason = get_value(:reason, report)
+    offender = get_value(:offender, report)
+    childpid = get_value(:pid, offender)
+    childname = get_value(:name, offender)
+    case get_value(:mfa, offender) do
+      :undefined ->
+          {m,f,_} = get_value(:mfargs, offender)
+      {m,f,_} ->
+          :ok
+    end
+    {:supervisor_report, ExSyslog.Util.format('~p ~p (~p) child: ~p [~p] ~p:~p',
+            [name, error, reason, childname, childpid, m, f])};
+  end
+
+  def message(format, args) when is_list(format) do
+    {:msg, ExSyslog.Util.format(format, args)}
   end
 
   def message(format, args) do
@@ -139,4 +171,12 @@ defmodule ExSyslog.EventHandler do
   def level_alert,  do: 1
   def level_emerg,  do: 0
   
+  def get_value(key, props) do
+    case :lists.keyfind(key, 1, props) do
+      {key, value} ->
+          value
+      false ->
+          :undefined
+    end
+  end
 end

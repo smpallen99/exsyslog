@@ -2,7 +2,7 @@ defmodule Exsyslog.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :ex_syslog,
+    [app: :exsyslog,
      version: "0.0.1",
      elixir: "~> 0.13.2",
      deps: deps]

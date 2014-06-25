@@ -21,6 +21,7 @@ defmodule ExSyslog.Util do
     level = String.upcase "#{level}"
     sprintf("%s: %s", [level, format])
     |> sprintf(data)
+    |> format([])
   end
 
   def format(format, data) do
@@ -36,9 +37,9 @@ defmodule ExSyslog.Util do
 
   def iso8601_timestamp do
     {_,_,micro} = now = :os.timestamp()
-    {{year,month,date},{hour,minute,second}} = :calendar.now_to_datetime(now)
-    format = '~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B.~6.10.0BZ'
-    :io_lib.format(format, [year, month, date, hour, minute, second, micro])
+    {{_year,month,date},{hour,minute,second}} = :calendar.now_to_datetime(now)
+    mstr = elem({"Jan","Feb","Mar","Apr","May","Jun","Jul", "Aug","Sep","Oct","Nov","Dec"}, month)
+    sprintf("%s %02d %02d:%02d:%02d", [mstr, date, hour, minute, second])
   end
 
   def get_env(key, default), do: Application.get_env(:exsyslog, key, default)

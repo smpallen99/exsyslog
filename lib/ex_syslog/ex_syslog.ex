@@ -43,7 +43,7 @@ defmodule ExSyslog.Logger do
   end
 
   def format(level, format, data) when is_list(data) do
-    [ level: level, msg: ExSyslog.Util.format(level, format, data), pid: self ]
+    [ level: ExSyslog.Util.level(level), msg: ExSyslog.Util.format(level, format, data), pid: self ]
     |> ExSyslog.Message.new
   end
   
