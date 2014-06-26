@@ -85,7 +85,7 @@ defmodule ExSyslog.EventHandler do
   end
 
   def write(level, :undefined, msg, pid, state) do
-    write(level, 'undef', msg, pid, state)
+    write(level, 'user', msg, pid, state)
   end
 
   def write(level, msgid, msg, pid, state) when is_list(msg) or is_binary(msg) do
