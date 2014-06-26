@@ -27,7 +27,7 @@ defmodule ExSyslog.Logger do
 
   def log(level_atom, format, data) do
     level = ExSyslog.Util.level(level_atom)      
-    case Application.get_env :exsyslog, :level do
+    case ExSyslog.Util.level(Application.get_env :exsyslog, :level) do
       nil when level <= @info_level ->  
         send_message(level_atom, format, data)
       threshold when level <= threshold ->  

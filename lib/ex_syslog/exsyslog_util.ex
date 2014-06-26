@@ -13,6 +13,7 @@ defmodule ExSyslog.Util do
   def level(:alert),   do: 1
   def level(:emerg),   do: 0
   def level(:panic),   do: 0
+  def level(:none),    do: 0
   
   def level(i) when is_integer(i) when i >= 0 and i <= 7, do: i
   def level(_bad), do: 3
