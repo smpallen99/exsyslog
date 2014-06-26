@@ -21,4 +21,13 @@
 # [dep1: [key: :value],
 #  dep2: [key: :value]]
 
-[exsyslog: [level: :debug, host: '127.0.0.1', facility: :local1]]
+
+# [exsyslog: [
+#   level: :info, 
+#   host: '127.0.0.1', 
+#   facility: :local2,
+#   appid: "exsyslog",
+#   max_term_size: 8192,
+#   max_message_size: 16000
+# ]]
+[exsyslog: [level: :info, host: '127.0.0.1', facility: :local1]]

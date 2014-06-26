@@ -12,8 +12,6 @@ defmodule ExSyslog.EventHandler do
     def new(opts), do: struct(new, opts)
   end
 
-  @syslog_version 1
-
   def level do
     :gen_event.call(:error_logger, ExSyslog.EventHandler, :level)
   end
@@ -27,7 +25,6 @@ defmodule ExSyslog.EventHandler do
   end
 
   def init([]) do
-    IO.puts "Event handler starting..."
     {:ok, socket} = :gen_udp.open(0)
     {:ok, :ok, state} = handle_call(:load_config, State.new(socket: socket))
     {:ok, state} 
@@ -93,8 +90,6 @@ defmodule ExSyslog.EventHandler do
 
   def write(level, msgid, msg, pid, state) when is_list(msg) or is_binary(msg) do
     %State{facility: facil, appid: app, hostname: hostname, host: host, port: port, socket: socket} = state
-      # pre = :io_lib.format('<~B>~B ~s ~s ~s ~p ~s - ', [facil ||| level,
-      #   @syslog_version, '', hostname, app, pid, msgid])
     pre = :io_lib.format('<~B>~s ~s~p: ~s - ', [facil ||| level,
       ExSyslog.Util.iso8601_timestamp, app, pid, msgid])
     send_msg(socket, host, port, [pre, msg, '\n'])
@@ -111,7 +106,6 @@ defmodule ExSyslog.EventHandler do
   end
 
   def message(type, report) when type in [:std_error, :std_info, :std_warning, :progress_report, :progress] do
-    # {type, ExSyslog.Util.format(type, "#{inspect report}", [])}
     {type, ExSyslog.Util.format('~2048.0p', [report])}
   end
 
@@ -174,9 +168,9 @@ defmodule ExSyslog.EventHandler do
   def get_value(key, props) do
     case :lists.keyfind(key, 1, props) do
       {key, value} ->
-          value
+        value
       false ->
-          :undefined
+        :undefined
     end
   end
 end

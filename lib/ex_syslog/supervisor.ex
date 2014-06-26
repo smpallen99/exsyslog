@@ -7,8 +7,6 @@ defmodule ExSyslog.Supervisor do
 
   def init([]) do
     children = [
-      # Define workers and child supervisors to be supervised
-      #worker(ExSyslog.EventHandler, []),
       worker(ExSyslog.Monitor, [])
     ]
 

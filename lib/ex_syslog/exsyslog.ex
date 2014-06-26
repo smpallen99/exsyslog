@@ -7,7 +7,6 @@ defmodule ExSyslog.Logger do
 
   def level(level_atom) do
     level = ExSyslog.Util.level(level_atom)      
-    #Application.put_env :exsyslog, :level, level
     ExSyslog.EventHandler.level level
   end
 
