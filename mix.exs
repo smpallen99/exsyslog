@@ -3,7 +3,7 @@ defmodule Exsyslog.Mixfile do
 
   def project do
     [app: :exsyslog,
-     version: "0.0.4",
+     version: "0.0.5",
      elixir: "~> 0.13.2",
      deps: deps]
   end
