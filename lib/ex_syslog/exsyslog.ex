@@ -14,7 +14,7 @@ defmodule ExSyslog.Logger do
     get_env(:level, :undefined)
   end
 
-  def log(level_atom, string), do: log(level_atom, string, [])
+  def log(level_atom, string), do: log(level_atom, String.replace(string, "%", "%%"), [])
 
   def log(level_atom, category, format, data) when is_atom(category) do
     category = String.upcase "#{category}"
@@ -22,7 +22,7 @@ defmodule ExSyslog.Logger do
   end  
 
   def log(level_atom, category, string) when is_atom(category) do
-    log(level_atom, category, string, [])
+    log(level_atom, category, String.replace(string, "%", "%%"), [])
   end
 
   def log(level_atom, format, data) do

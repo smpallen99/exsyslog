@@ -1,7 +1,13 @@
 defmodule ExsyslogTest do
   use ExUnit.Case
+  alias ExSyslog.Logger, as: ExLog
 
-  test "the truth" do
-    assert 1 + 1 == 2
+  defmodule MyStruct do
+    defstruct one: 1
+  end
+
+  test "logs inspected structs" do
+    str = inspect(%MyStruct{})
+    ExLog.log :none, str
   end
 end
