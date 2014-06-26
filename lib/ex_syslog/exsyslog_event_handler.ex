@@ -92,11 +92,21 @@ defmodule ExSyslog.EventHandler do
     %State{facility: facil, appid: app, hostname: hostname, host: host, port: port, socket: socket} = state
     pre = :io_lib.format('<~B>~s ~s~p: ~s - ', [facil ||| level,
       ExSyslog.Util.iso8601_timestamp, app, pid, msgid])
-    send_msg(socket, host, port, [pre, msg, '\n'])
+    split_msg(socket, host, port, [pre, msg, '\n'])
   end
 
   def write(_, :undefined, packet), do: IO.puts packet
   
+  def split_msg(socket, host,  port, [pre, msg, nl]) do
+    if is_list msg do
+      String.from_char_data! msg
+    else
+      msg
+    end
+    |> String.split("\n")
+    |> Enum.each(&send_msg(socket, host, port, [pre, &1, nl]))
+  end
+
   def send_msg(_, :undefined, _, packet) do
     :io.format('~s', [packet])
   end
@@ -119,15 +129,15 @@ defmodule ExSyslog.EventHandler do
     {:crash_report, msg}
   end
   def message(:supervisor_report, report) do
-    name = get_value(:supervisor, report)
-    error = get_value(:errorcontext, report)
-    reason = get_value(:reason, report)
-    offender = get_value(:offender, report)
-    childpid = get_value(:pid, offender)
-    childname = get_value(:name, offender)
-    case get_value(:mfa, offender) do
+    name = Keyword.get(report, :supervisor, :undefined)
+    error = Keyword.get(report, :errorcontext, :undefined)
+    reason = Keyword.get(report, :reason, :undefined)
+    offender = Keyword.get(report, :offender, :undefined)
+    childpid = Keyword.get(offender, :pid, :undefined)
+    childname = Keyword.get(offender, :name, :undefined)
+    case Keyword.get(offender, :mfa, :undefined) do
       :undefined ->
-          {m,f,_} = get_value(:mfargs, offender)
+          {m,f,_} = Keyword.get(offender, :mfargs, :undefined)
       {m,f,_} ->
           :ok
     end
@@ -165,12 +175,4 @@ defmodule ExSyslog.EventHandler do
   def level_alert,  do: 1
   def level_emerg,  do: 0
   
-  def get_value(key, props) do
-    case :lists.keyfind(key, 1, props) do
-      {key, value} ->
-        value
-      false ->
-        :undefined
-    end
-  end
 end
