@@ -37,9 +37,8 @@ defmodule ExSyslog.Util do
   end
 
   def iso8601_timestamp do
-    {_,_,micro} = now = :os.timestamp()
-    {{_year,month,date},{hour,minute,second}} = :calendar.now_to_datetime(now)
-    mstr = elem({"Jan","Feb","Mar","Apr","May","Jun","Jul", "Aug","Sep","Oct","Nov","Dec"}, month)
+    {{_year,month,date},{hour,minute,second}} = :calendar.local_time()
+    mstr = elem({"Jan","Feb","Mar","Apr","May","Jun","Jul", "Aug","Sep","Oct","Nov","Dec"}, month-1)
     sprintf("%s %02d %02d:%02d:%02d", [mstr, date, hour, minute, second])
   end
 
